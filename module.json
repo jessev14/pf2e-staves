@@ -1,0 +1,30 @@
+{
+    "id": "pf2e-staves",
+    "title": "PF2e Staves",
+    "description": "",
+    "authors": [
+        {
+            "name": "enso",
+            "discord": "enso#0361"
+        }
+    ],
+    "version": "1.0.0",
+    "compatibility": {
+        "minimum": "10",
+        "verified": "10"
+    },
+    "esmodules": [
+        "./scripts/main.js"
+    ],
+    "styles": [
+        "./styles/style.css"
+    ],
+    "languages": [],
+    "relationships": {
+    },
+    "flags": {
+    },
+    "url": "",
+    "manifest": "",
+    "download": ""
+}
