@@ -35,15 +35,13 @@ Hooks.on('createItem', async (weapon, options, userID) => {
             if (!spell || spell?.type !== 'spell') continue;
             
             let spellClone;
-            if (spell.id) spellClone = spell.clone();
+            if (spell.id) spellClone = spell.clone({ 'system.location.heightenedLevel': i });
             else {
                 const { pack, _id } = spell;
                 const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
-                //if (spellFromPack) spells.push(spellFromPack.clone({staveLevel: i}));
-                spellClone = spellFromPack.clone();
+                spellClone = spellFromPack.clone({ 'system.location.heightenedLevel': i });
             }
 
-            spellClone.staveLevel = i;
             spells.push(spellClone);
         }
     }
@@ -85,10 +83,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
         }
     }
     const [spellcastingEntry] = await actor.createEmbeddedDocuments('Item', [createData]);
-    for (const spell of spells) {
-        const createdSpell = await spellcastingEntry.addSpell(spell);
-        if (spell.staveLevel) await createdSpell.update({ 'system.location.heightenedLevel': spell.staveLevel });
-    }
+    for (const spell of spells) await spellcastingEntry.addSpell(spell);
 });
 
 // Delete spellcastingEntry associated with stave.
@@ -248,7 +243,7 @@ Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
 
                         await actor.spellcasting.get(entryID).update({ [`system.slots.slot${selectedLevel}.value`]: currentSlots - 1 });
                         await spellcastingEntry.setFlag(moduleID, 'charges', charges - 1);
-                        await spell.toMessage(undefined, { rollMode: game.settings.get('core', 'rollMode') });
+                        await spellcastingEntry.cast(spell, { consume: false });
                     },
                     rejectClose: false,
                     options: { width: 250 }
