@@ -13,6 +13,17 @@
         "minimum": "10",
         "verified": "10"
     },
+    "relationships": {
+        "systems": [
+            {
+                "id": "pf2e",
+                "type": "system",
+                "compatibility": {
+                    "minimum": "4.3.0"
+                }
+            }
+        ]
+    },
     "esmodules": [
         "./scripts/main.js"
     ],
@@ -20,10 +31,7 @@
         "./styles/style.css"
     ],
     "languages": [],
-    "relationships": {
-    },
-    "flags": {
-    },
+    "flags": {},
     "url": "",
     "manifest": "",
     "download": ""
