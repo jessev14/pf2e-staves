@@ -13,27 +13,59 @@ Hooks.once('init', () => {
 
 // When stave added to a character, also create corresponding spellcasting entry.
 Hooks.on('createItem', async (weapon, options, userID) => {
+    if (!weapon.actor) return;
     if (userID !== game.user.id) return;
 
     const traits = weapon.system.traits?.value;
     const isStave = traits.includes('magical') && traits.includes('staff');
     if (!isStave) return;
 
-    const description = weapon.system.description.value;
-    const UUIDs = description.match(/@UUID[^}]*}/g);
     const spells = [];
-    for (const str of UUIDs) {
-        const UUID = str.split('[')[1].split(']')[0];
-        const spell = await fromUuid(UUID);
-        if (!spell || spell?.type !== 'spell') continue;
+    const description = weapon.system.description.value;
+    const slotLevels = ['Cantrips?', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th'];
+    for (let i = 0; i < slotLevels.length; i++) {
+        const regex = new RegExp(`${slotLevels[i]}.*@UUID.*\n`);
+        const match = description.match(regex);
+        if (!match) continue;
 
-        if (spell.id) spells.push(spell);
-        else {
-            const { pack, _id } = spell;
-            const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
-            if (spellFromPack) spells.push(spellFromPack);
+        const strs = match[0].match(/(@UUID[^}]*})/g);
+        for (const str of strs) {
+            const UUID = str.split('[')[1].split(']')[0];
+            const spell = await fromUuid(UUID);
+            if (!spell || spell?.type !== 'spell') continue;
+            
+            let spellClone;
+            if (spell.id) spellClone = spell.clone();
+            else {
+                const { pack, _id } = spell;
+                const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
+                //if (spellFromPack) spells.push(spellFromPack.clone({staveLevel: i}));
+                spellClone = spellFromPack.clone();
+            }
+
+            spellClone.staveLevel = i;
+            spells.push(spellClone);
         }
     }
+    
+    if (!spells.length) { // fallback
+        const UUIDs = description.match(/@UUID[^}]*}/g);
+        if (!UUIDs) return;
+
+        for (const str of UUIDs) {
+            const UUID = str.split('[')[1].split(']')[0];
+            const spell = await fromUuid(UUID);
+            if (!spell || spell?.type !== 'spell') continue;
+            
+            if (spell.id) spells.push(spell);
+            else {
+                const { pack, _id } = spell;
+                const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
+                if (spellFromPack) spells.push(spellFromPack);
+            }
+        }
+    }
+
     if (!spells.length) return;
 
     const { actor } = weapon;
@@ -53,7 +85,10 @@ Hooks.on('createItem', async (weapon, options, userID) => {
         }
     }
     const [spellcastingEntry] = await actor.createEmbeddedDocuments('Item', [createData]);
-    for (const spell of spells) await spellcastingEntry.addSpell(spell);
+    for (const spell of spells) {
+        const createdSpell = await spellcastingEntry.addSpell(spell);
+        if (spell.staveLevel) await createdSpell.update({ 'system.location.heightenedLevel': spell.staveLevel });
+    }
 });
 
 // Delete spellcastingEntry associated with stave.
@@ -178,7 +213,7 @@ Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
                 if (slotLevel > charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
 
                 await spellcastingEntry.setFlag(moduleID, 'charges', charges - slotLevel);
-                await spell.toMessage(undefined, { rollMode: game.settings.get('core', 'rollMode') });
+                await spellcastingEntry.cast(spell, { consume: false });
             });
             button.addEventListener('contextmenu', async ev => {
                 if (!charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
