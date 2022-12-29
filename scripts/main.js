@@ -99,26 +99,39 @@ Hooks.on('preDeleteItem', (weapon, options, userID) => {
 });
 
 // Implement charge spellcasting rules on character sheet.
-Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
+// Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
+Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
     const actor = sheet.object;
-    const spellcastingOl = html.querySelector('ol.spellcastingEntry-list');
-    const spellcastingLis = spellcastingOl.querySelectorAll('li.spellcasting-entry');
+    const isPC = actor.type === 'character';
+
+    const spellcastingLis = html.querySelectorAll('li.spellcasting-entry');
     for (const li of spellcastingLis) {
         const spellcastingEntry = actor.spellcasting.get(li.dataset.containerId);
         if (spellcastingEntry.system.prepared.value !== 'charge') continue;
 
-        const chargeSection = document.createElement('section');
-        chargeSection.innerHTML = `
-            <h4 class='skill-name spellcasting'>Charges</h4>
-            <input class="${moduleID}-charges" type="number" value="${spellcastingEntry.getFlag(moduleID, 'charges')}" placeholder="0">
-            <a class="${moduleID}-charge"><i class="fas fa-redo"></i></a>
-        `;
-
+        let chargeEl;
+        if (isPC) {
+            chargeEl = document.createElement('section');
+            chargeEl.innerHTML = `
+                <h4 class='skill-name spellcasting'>Charges</h4>
+                <input class="${moduleID}-charges" type="number" value="${spellcastingEntry.getFlag(moduleID, 'charges')}" placeholder="0">
+                <a class="${moduleID}-charge"><i class="fas fa-redo"></i></a>
+            `;
+        } else {
+            chargeEl = document.createElement('div');
+            chargeEl.classList.add('inline-field');
+            chargeEl.innerHTML = `
+                <label>Charges</label>
+                <input class="dc-input modifier adjustable" type="number" value="${spellcastingEntry.getFlag(moduleID, 'charges')}" placeholder="0">
+                <a class="${moduleID}-charge"><i class="fas fa-redo"></i></a>
+            `;
+        }
+        
         // Charge input.
-        chargeSection.querySelector('input').addEventListener('focus', ev => {
+        chargeEl.querySelector('input').addEventListener('focus', ev => {
             ev.currentTarget.select();
         });
-        chargeSection.querySelector('input').addEventListener('change', async ev => {
+        chargeEl.querySelector('input').addEventListener('change', async ev => {
             const { target } = ev;
             const charges = target.value;
             const clampedCharges = Math.max(0, charges);
@@ -128,7 +141,7 @@ Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
         });
 
         // Charge stave prompt.
-        chargeSection.querySelector('a').addEventListener('click', async ev => {
+        chargeEl.querySelector('a').addEventListener('click', async ev => {
             let options = ``;
             for (const entry of actor.spellcasting) {
                 if (entry.system.prepared.value !== 'prepared') continue;
@@ -185,7 +198,10 @@ Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
             });
         });
 
-        li.querySelector('div.statistic-values').appendChild(chargeSection);
+        const characterHeader = li.querySelector('div.statistic-values');
+        const npcHeader = li.querySelector('h4.name');
+        if (isPC) characterHeader.appendChild(chargeEl);
+        else npcHeader.after(chargeEl);
 
         // Override cast button event handlers to use charges instead of spell slots.
         const castButtons = li.querySelectorAll('button.cast-spell');
@@ -212,28 +228,25 @@ Hooks.on('renderCharacterSheetPF2e', (sheet, [html], sheetData) => {
             });
             button.addEventListener('contextmenu', async ev => {
                 if (!charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
-                let options = ``;
+                const select = document.createElement('select');
+                select.style.width = '100%';
+                select.style['margin-bottom'] = '5px';
                 for (const entry of actor.spellcasting) {
                     if (entry.system.prepared.value !== 'spontaneous') continue;
-                    options += `<optgroup label="${entry.name}">`;
+                    select.innerHTML += `<optgroup label="${entry.name}">`;
                     for (let i = slotLevel; i < 12; i++) {
                         const currentSlotLevel = Object.values(entry.system.slots)[i];
                         const { value, max } = currentSlotLevel;
-                        if (value) options += `<option value="${entry.id}-${i}">Level ${i} Slot (${value}/${max})</option>`;
+                        if (value) select.innerHTML += `<option value="${entry.id}-${i}">Level ${i} Slot (${value}/${max})</option>`;
                     }
 
-                    options += `</optgroup>`;
+                    select.innerHTML += `</optgroup>`;
                 }
-                if (!options) return ui.notifications.warn('You do not have any Spontaneous spell slots available to cast this spell.');
+                if (!select.length) return ui.notifications.warn('You do not have any Spontaneous spell slots available to cast this spell.');
 
-                const content = `
-                    <select style="width: 100%; margin-bottom: 5px;">
-                        ${options}
-                    </select>
-                `;
                 await Dialog.prompt({
                     title: 'Use Spell Slot?',
-                    content,
+                    content: select.outerHTML,
                     label: 'Consume Spell Slot',
                     callback: async ([html]) => {
                         const select = html.querySelector('select');
