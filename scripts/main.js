@@ -263,6 +263,27 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
                 });
             });
         }
+
+        // Add .slotless-level-toggle button.
+        const slotToggleButton = document.createElement('a');
+        slotToggleButton.title = 'Toggle visibility of spell levels without slots';
+        slotToggleButton.classList.add('skill-name', 'slotless-level-toggle');
+        slotToggleButton.innerHTML = `<i class="fas fa-list-alt"></i>`;
+        slotToggleButton.addEventListener('click', async ev => {
+            ev.preventDefault();
+
+            const spellcastingID = $(ev.currentTarget).parents(".item-container").attr("data-container-id") ?? "";
+            if (!spellcastingID) return;
+
+            const spellcastingEntry = actor.items.get(spellcastingID);
+            const bool = !(spellcastingEntry.system.showSlotlessLevels || {}).value;
+            await spellcastingEntry.update({
+                "system.showSlotlessLevels.value": bool,
+            });
+        });
+
+        const itemControls = li.querySelector('div.item-controls');
+        itemControls.prepend(slotToggleButton);
     }
 });
 
