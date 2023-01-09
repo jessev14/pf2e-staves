@@ -33,7 +33,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
             const UUID = str.split('[')[1].split(']')[0];
             const spell = await fromUuid(UUID);
             if (!spell || spell?.type !== 'spell') continue;
-            
+
             let spellClone;
             if (spell.id) spellClone = spell.clone({ 'system.location.heightenedLevel': i });
             else {
@@ -45,7 +45,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
             spells.push(spellClone);
         }
     }
-    
+
     if (!spells.length) { // fallback
         const UUIDs = description.match(/@UUID[^}]*}/g);
         if (!UUIDs) return;
@@ -54,7 +54,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
             const UUID = str.split('[')[1].split(']')[0];
             const spell = await fromUuid(UUID);
             if (!spell || spell?.type !== 'spell') continue;
-            
+
             if (spell.id) spells.push(spell);
             else {
                 const { pack, _id } = spell;
@@ -126,7 +126,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
                 <a class="${moduleID}-charge"><i class="fas fa-redo"></i></a>
             `;
         }
-        
+
         // Charge input.
         chargeEl.querySelector('input').addEventListener('focus', ev => {
             ev.currentTarget.select();
@@ -143,31 +143,32 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
         // Charge stave prompt.
         chargeEl.querySelector('a').addEventListener('click', async ev => {
             let options = ``;
-            for (const entry of actor.spellcasting) {
-                if (entry.system.prepared.value !== 'prepared') continue;
+            for (const li of spellcastingLis) {
+                const spellcastingEntry = actor.spellcasting.get(li.dataset.containerId);
+                if (spellcastingEntry.system.prepared.value !== 'prepared') continue;
 
                 const preppedSpells = [];
-                for (let i = 1; i < 12; i++) {
-                    const currentSlot = Object.values(entry.system.slots)[i];
-                    for (const preppedSpell of Object.values(currentSlot.prepared)) {
-                        if (!preppedSpell.id || preppedSpell.expended) continue;
+                for (const spellLi of li.querySelectorAll('li.item.spell')) {
+                    if (spellLi.dataset.expendedState === 'true' || !parseInt(spellLi.dataset.slotLevel)) continue;
 
-                        const spell = actor.items.get(preppedSpell.id);
-                        preppedSpells.push({
-                            id: spell.id,
-                            name: spell.name,
-                            slotLevel: i
-                        });
+                    const spell = actor.items.get(spellLi.dataset.itemId);
+                    const { entryId, slotLevel, slotId } = spellLi.dataset;
+                    preppedSpells.push({
+                        name: spell.name,
+                        entryId,
+                        slotLevel,
+                        slotId
+                    });
+                }
+                if (preppedSpells.length) {
+                    options += `<optgroup label="${spellcastingEntry.name}">`
+                    for (const spell of preppedSpells) {
+                        options += `<option data-entry-id="${spell.entryId}" data-slot-level="${spell.slotLevel}" data-slot-id="${spell.slotId}">${spell.name} (+${spell.slotLevel})</option>`
                     }
+                    options += `</optgroup>`;
                 }
-                if (!preppedSpells.length) continue;
-                
-                options += `<optgroup label="${entry.name}">`
-                for (const spell of preppedSpells) {
-                    options += `<option value="${spell.id}">${spell.name} (+${spell.slotLevel})</option>`
-                }
-                options += `</optgroup>`;
             }
+
             if (options) options = `<option></option>` + options;
             const content = options
                 ? `
@@ -182,15 +183,15 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
                 content,
                 label: 'Charge',
                 callback: async ([dialogHtml]) => {
-                    const charges = getHighestSpellslot(sheet.object);
-                    const selectedSpellID = dialogHtml.querySelector('select')?.value;
-                    const spellLi = html.querySelector(`li[data-item-id="${selectedSpellID}"]`);
-                    if (!spellLi) return spellcastingEntry.setFlag(moduleID, 'charges', charges);
+                    const charges = getHighestSpellslot(actor);
+                    const select = dialogHtml.querySelector('select');
+                    if (!select || !select?.selectedIndex) return spellcastingEntry.setFlag(moduleID, 'charges', charges);
 
-                    const { slotLevel, slotId, entryId } = spellLi.dataset;
-                    const entry = actor.spellcasting.get(entryId);
+                    const selectedSpellOption = select.options[select.selectedIndex];
+                    const { entryId, slotLevel, slotId } = selectedSpellOption.dataset;
+                    const entry = actor.items.get(entryId);
                     entry.setSlotExpendedState(slotLevel, slotId, true);
-                    
+
                     return spellcastingEntry.setFlag(moduleID, 'charges', charges + parseInt(slotLevel));
                 },
                 rejectClose: false,
