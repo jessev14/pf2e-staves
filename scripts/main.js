@@ -8,6 +8,9 @@ Hooks.once('init', () => {
     // Add Charge spell type.
     CONFIG.PF2E.spellCategories.charge = 'Charge';
     CONFIG.PF2E.preparationType.charge = 'Charge';
+
+    // Patch spellcastingEntry#cast to use charges instead of spell slots for staves.
+    libWrapper.register(moduleID, 'CONFIG.PF2E.Item.documentClasses.spellcastingEntry.prototype.cast', spellcastingEntry_cast, 'MIXED');
 });
 
 
@@ -204,66 +207,17 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
         if (isPC) characterHeader.appendChild(chargeEl);
         else npcHeader.after(chargeEl);
 
-        // Override cast button event handlers to use charges instead of spell slots.
+        // Add spontaneous spellcasting rules to Cast button right click.
         const castButtons = li.querySelectorAll('button.cast-spell');
-        for (const button of castButtons) {
-            const spellLi = button.closest('li');
-            const slotLevel = parseInt(spellLi.dataset.slotLevel);
-            if (!slotLevel) continue;
-
-            button.replaceWith(button.cloneNode(true));
-        }
-        const replacedButtons = li.querySelectorAll('button.cast-spell');
-        for (const button of replacedButtons) {
-            const spellLi = button.closest('li');
-            const slotLevel = parseInt(spellLi.dataset.slotLevel);
-            if (!slotLevel) continue;
-
-            const spell = actor.items.get(button.closest('li').dataset.itemId);
-            const charges = spellcastingEntry.getFlag(moduleID, 'charges');
-            button.addEventListener('click', async ev => {
-                if (slotLevel > charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
-
-                await spellcastingEntry.setFlag(moduleID, 'charges', charges - slotLevel);
-                await spellcastingEntry.cast(spell, { consume: false });
+        castButtons.forEach(button => {
+            button.addEventListener('contextmenu', () => {
+                const spellLi = button.closest('li.item.spell');
+                const { itemId, slotLevel, slotId, entryId } = spellLi.dataset;
+                const collection = actor.spellcasting.collections.get(entryId, { strict: true });
+                const spell = collection.get(itemId, { strict: true});
+                collection.entry.cast(spell, { level: slotLevel, [`${moduleID}Spontaneous`]: true });
             });
-            button.addEventListener('contextmenu', async ev => {
-                if (!charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
-                const select = document.createElement('select');
-                select.style.width = '100%';
-                select.style['margin-bottom'] = '5px';
-                for (const entry of actor.spellcasting) {
-                    if (entry.system.prepared.value !== 'spontaneous') continue;
-                    select.innerHTML += `<optgroup label="${entry.name}">`;
-                    for (let i = slotLevel; i < 12; i++) {
-                        const currentSlotLevel = Object.values(entry.system.slots)[i];
-                        const { value, max } = currentSlotLevel;
-                        if (value) select.innerHTML += `<option value="${entry.id}-${i}">Level ${i} Slot (${value}/${max})</option>`;
-                    }
-
-                    select.innerHTML += `</optgroup>`;
-                }
-                if (!select.length) return ui.notifications.warn('You do not have any Spontaneous spell slots available to cast this spell.');
-
-                await Dialog.prompt({
-                    title: 'Use Spell Slot?',
-                    content: select.outerHTML,
-                    label: 'Consume Spell Slot',
-                    callback: async ([html]) => {
-                        const select = html.querySelector('select');
-                        const [entryID, selectedLevel] = select.value.split('-');
-                        const entry = actor.spellcasting.get(entryID);
-                        const currentSlots = entry.system.slots[`slot${selectedLevel}`].value;
-
-                        await actor.spellcasting.get(entryID).update({ [`system.slots.slot${selectedLevel}.value`]: currentSlots - 1 });
-                        await spellcastingEntry.setFlag(moduleID, 'charges', charges - 1);
-                        await spellcastingEntry.cast(spell, { consume: false });
-                    },
-                    rejectClose: false,
-                    options: { width: 250 }
-                });
-            });
-        }
+        });
 
         // Add .slotless-level-toggle button.
         const slotToggleButton = document.createElement('a');
@@ -302,4 +256,58 @@ function getHighestSpellslot(actor) {
     });
 
     return charges;
+}
+
+async function spellcastingEntry_cast(wrapped, spell, options) {
+    if (!spell.spellcasting.flags[moduleID] || spell.isCantrip) return wrapped(spell, options);
+
+    options.consume = false;
+    if (options[`${moduleID}Override`]) return wrapped(spell, options);
+
+    const { actor } = spell;
+    const charges = spell.spellcasting.getFlag(moduleID, 'charges');
+    if (options[`${moduleID}Spontaneous`]) {
+        if (!charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
+
+        const select = document.createElement('select');
+        select.style.width = '100%';
+        select.style['margin-bottom'] = '5px';
+        for (const entry of actor.spellcasting) {
+            if (entry.system.prepared.value !== 'spontaneous') continue;
+            select.innerHTML += `<optgroup label="${entry.name}">`;
+            for (let i = parseInt(options.level); i < 12; i++) {
+                const currentSlotLevel = Object.values(entry.system.slots)[i];
+                const { value, max } = currentSlotLevel;
+                if (value) select.innerHTML += `<option value="${entry.id}-${i}">Level ${i} Slot (${value}/${max})</option>`;
+            }
+
+            select.innerHTML += `</optgroup>`;
+        }
+        if (!select.length) return ui.notifications.warn('You do not have any Spontaneous spell slots available to cast this spell.');
+
+        await Dialog.prompt({
+            title: 'Use Spell Slot?',
+            content: select.outerHTML,
+            label: 'Consume Spell Slot',
+            callback: async ([html]) => {
+                const select = html.querySelector('select');
+                const [entryID, selectedLevel] = select.value.split('-');
+                const entry = actor.spellcasting.get(entryID);
+                const currentSlots = entry.system.slots[`slot${selectedLevel}`].value;
+
+                await actor.spellcasting.get(entryID).update({ [`system.slots.slot${selectedLevel}.value`]: currentSlots - 1 });
+                await spell.spellcasting.setFlag(moduleID, 'charges', charges - 1);
+                options[`${moduleID}Override`] = true;
+                return spell.spellcasting.cast(spell, options);
+            },
+            rejectClose: false,
+            options: { width: 250 }
+        });
+
+    } else {
+        if (spell.level > charges) return ui.notifications.warn('You do not have enough stave charges to cast this spell.');
+
+        await spell.spellcasting.setFlag(moduleID, 'charges', charges - spell.level);
+        return wrapped(spell, options);
+    }
 }
