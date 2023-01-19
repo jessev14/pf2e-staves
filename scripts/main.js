@@ -110,7 +110,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
     const spellcastingLis = html.querySelectorAll('li.spellcasting-entry');
     for (const li of spellcastingLis) {
         const spellcastingEntry = actor.spellcasting.get(li.dataset.containerId);
-        if (spellcastingEntry.system.prepared.value !== 'charge') continue;
+        if (spellcastingEntry?.system.prepared.value !== 'charge') continue;
 
         let chargeEl;
         if (isPC) {
