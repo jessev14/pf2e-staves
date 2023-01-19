@@ -20,7 +20,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
     if (userID !== game.user.id) return;
 
     const traits = weapon.system.traits?.value;
-    const isStave = traits.includes('magical') && traits.includes('staff');
+    const isStave = traits?.includes('magical') && traits?.includes('staff');
     if (!isStave) return;
 
     const spells = [];
@@ -92,7 +92,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
 // Delete spellcastingEntry associated with stave.
 Hooks.on('preDeleteItem', (weapon, options, userID) => {
     const traits = weapon.system.traits?.value;
-    const isStave = traits.includes('magical') && traits.includes('staff');
+    const isStave = traits?.includes('magical') && traits?.includes('staff');
     if (!isStave) return;
 
     const { actor } = weapon;
