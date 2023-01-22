@@ -16,7 +16,6 @@ Hooks.once('init', () => {
 
 // When stave added to a character, also create corresponding spellcasting entry.
 Hooks.on('createItem', async (weapon, options, userID) => {
-    debugger
     if (!weapon.actor) return;
     if (userID !== game.user.id) return;
 
