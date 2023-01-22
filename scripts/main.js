@@ -16,6 +16,7 @@ Hooks.once('init', () => {
 
 // When stave added to a character, also create corresponding spellcasting entry.
 Hooks.on('createItem', async (weapon, options, userID) => {
+    debugger
     if (!weapon.actor) return;
     if (userID !== game.user.id) return;
 
@@ -27,7 +28,8 @@ Hooks.on('createItem', async (weapon, options, userID) => {
     const description = weapon.system.description.value;
     const slotLevels = ['Cantrips?', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th'];
     for (let i = 0; i < slotLevels.length; i++) {
-        const regex = new RegExp(`${slotLevels[i]}.*@UUID.*\n`);
+        //const regex = new RegExp(`${slotLevels[i]}.*@UUID.*\n`);
+        const regex = new RegExp(`${slotLevels[i]}.*@UUID.*`);
         const match = description.match(regex);
         if (!match) continue;
 
