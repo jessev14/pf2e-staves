@@ -90,6 +90,88 @@ Hooks.on('createItem', async (weapon, options, userID) => {
     for (const spell of spells) await spellcastingEntry.addSpell(spell);
 });
 
+// When stave updated on a character, also update corresponding spellcasting entry.
+Hooks.on('updateItem', async (weapon, update, options, userID) => {
+    if (!weapon.actor) return;
+    if (userID !== game.user.id) return;
+
+    const traits = weapon.system.traits?.value;
+    const isStave = traits?.includes('magical') && traits?.includes('staff');
+    if (!isStave) return;
+
+    const spells = [];
+    const description = weapon.system.description.value;
+    const slotLevels = ['Cantrips?', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th'];
+    for (let i = 0; i < slotLevels.length; i++) {
+        //const regex = new RegExp(`${slotLevels[i]}.*@UUID.*\n`);
+        const regex = new RegExp(`${slotLevels[i]}.*@UUID.*`);
+        const match = description.match(regex);
+        if (!match) continue;
+
+        const strs = match[0].match(/(@UUID[^}]*})/g);
+        for (const str of strs) {
+            const UUID = str.split('[')[1].split(']')[0];
+            const spell = await fromUuid(UUID);
+            if (!spell || spell?.type !== 'spell') continue;
+
+            let spellClone;
+            if (spell.id) spellClone = spell.clone({ 'system.location.heightenedLevel': i });
+            else {
+                const { pack, _id } = spell;
+                const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
+                spellClone = spellFromPack.clone({ 'system.location.heightenedLevel': i });
+            }
+
+            spells.push(spellClone);
+        }
+    }
+
+    if (!spells.length) { // fallback
+        const UUIDs = description.match(/@UUID[^}]*}/g);
+        if (!UUIDs) return;
+
+        for (const str of UUIDs) {
+            const UUID = str.split('[')[1].split(']')[0];
+            const spell = await fromUuid(UUID);
+            if (!spell || spell?.type !== 'spell') continue;
+
+            if (spell.id) spells.push(spell);
+            else {
+                const { pack, _id } = spell;
+                const spellFromPack = await game.packs.get(pack)?.getDocuments().find(s => s.id === _id);
+                if (spellFromPack) spells.push(spellFromPack);
+            }
+        }
+    }
+
+    if (!spells.length) return;
+
+    // delete the old entry to avoid duplicate spellcasting entries
+    const { actor } = weapon;
+    console.log("update - actor: " + actor);
+    const spellcastingEntries = actor.items.filter(i => i.type === 'spellcastingEntry');
+    const oldspellcastingEntry = spellcastingEntries.find(i => i.getFlag(moduleID, 'staveID') === weapon.id);
+    if (oldspellcastingEntry) oldspellcastingEntry.delete();
+
+    const createData = {
+        type: 'spellcastingEntry',
+        name: weapon.name,
+        system: {
+            prepared: {
+                value: 'charge'
+            }
+        },
+        flags: {
+            [moduleID]: {
+                staveID: weapon.id,
+                charges: getHighestSpellslot(actor)
+            }
+        }
+    }
+    const [spellcastingEntry] = await actor.createEmbeddedDocuments('Item', [createData]);
+    for (const spell of spells) await spellcastingEntry.addSpell(spell);
+});
+
 // Delete spellcastingEntry associated with stave.
 Hooks.on('preDeleteItem', (weapon, options, userID) => {
     const traits = weapon.system.traits?.value;
