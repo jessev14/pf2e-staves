@@ -3,6 +3,13 @@ export const moduleID = 'pf2e-staves';
 
 export const lg = x => console.log(x);
 
+const mostCommonInList = (arr) => {
+    return arr.sort((a,b) =>
+          arr.filter(v => v===a).length
+        - arr.filter(v => v===b).length
+    ).pop();
+}
+
 
 Hooks.once('init', () => {
     // Add Charge spell type.
@@ -243,12 +250,26 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     if (!spells.length) return;
 
     if (!existingEntry) {
+        const highestMentalAbilityValue = Math.max(...Object.keys(actor.abilities).filter(abi => ['cha', 'int', 'wis'].includes(abi)).map(abi => actor.abilities[abi].value));
+        // picking best mental ability; not always correct, but it's a good rule of thumb
+        const bestMentalAbility = Object.keys(actor.abilities).find(abi => actor.abilities[abi].value === highestMentalAbilityValue);
+        // rule of thumb for tradition is to pick whatever exists in other spellcasting entries
+        const mostCommonTradition = mostCommonInList(actor.spellcasting.map(se => se.system.tradition.value));
         const createData = {
             type: 'spellcastingEntry',
             name: stave.name,
             system: {
                 prepared: {
                     value: 'charge'
+                },
+                ability: {
+                    value: bestMentalAbility
+                },
+                tradition: {
+                    value: mostCommonTradition
+                },
+                showSlotlessLevels: {
+                    value: false
                 }
             },
             flags: {
