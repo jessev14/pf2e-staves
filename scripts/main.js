@@ -206,15 +206,14 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     const description = stave.system.description.value;
     const slotLevels = ['Cantrips?', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th'];
     for (let i = 0; i < slotLevels.length; i++) {
-        //const regex = new RegExp(`${slotLevels[i]}.*@UUID.*\n`);
-        const regex = new RegExp(`${slotLevels[i]}.*@UUID.*`);
+        const regex = new RegExp(`${slotLevels[i]}.*@(UUID|Compendium).*\n`);
         const match = description.match(regex);
         if (!match) continue;
 
-        const strs = match[0].match(/(@UUID[^}]*})/g);
+        const strs = match[0].match(/(@UUID\[Compendium\.|@Compendium\[)(.*?)].*?}/g);
         for (const str of strs) {
-            const UUID = str.split('[')[1].split(']')[0];
-            const spell = await fromUuid(UUID);
+            const UUID = str.split('[')[1].split(']')[0].replace('Compendium.', '');
+            const spell = await fromUuid("Compendium." + UUID);
             if (!spell || spell?.type !== 'spell') continue;
 
             let spellClone;
@@ -230,12 +229,12 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     }
 
     if (!spells.length) { // fallback
-        const UUIDs = description.match(/@UUID[^}]*}/g);
+        const UUIDs = description.match(/(@UUID\[Compendium\.|@Compendium\[)(.*?)].*?}/g);
         if (!UUIDs) return;
 
         for (const str of UUIDs) {
-            const UUID = str.split('[')[1].split(']')[0];
-            const spell = await fromUuid(UUID);
+            const UUID = str.split('[')[1].split(']')[0].replace('Compendium.', '');
+            const spell = await fromUuid("Compendium." + UUID);
             if (!spell || spell?.type !== 'spell') continue;
 
             if (spell.id) spells.push(spell);
