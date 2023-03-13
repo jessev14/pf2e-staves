@@ -68,7 +68,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
     const spellcastingLis = html.querySelectorAll('li.spellcasting-entry');
     for (const li of spellcastingLis) {
         const spellcastingEntry = actor.spellcasting.get(li.dataset.containerId);
-        if (spellcastingEntry?.system.prepared.value !== 'charge') continue;
+        if (spellcastingEntry?.system?.prepared?.value !== 'charge') continue;
 
         let chargeEl;
         if (isPC) {
@@ -106,7 +106,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
             let options = ``;
             for (const li of spellcastingLis) {
                 const spellcastingEntry = actor.spellcasting.get(li.dataset.containerId);
-                if (spellcastingEntry.system.prepared.value !== 'prepared') continue;
+                if (spellcastingEntry?.system?.prepared?.value !== 'prepared') continue;
 
                 const preppedSpells = [];
                 for (const spellLi of li.querySelectorAll('li.item.spell')) {
@@ -189,7 +189,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
             if (!spellcastingID) return;
 
             const spellcastingEntry = actor.items.get(spellcastingID);
-            const bool = !(spellcastingEntry.system.showSlotlessLevels || {}).value;
+            const bool = !(spellcastingEntry?.system?.showSlotlessLevels || {}).value;
             await spellcastingEntry.update({
                 "system.showSlotlessLevels.value": bool,
             });
