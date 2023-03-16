@@ -253,7 +253,7 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
         // picking best mental ability; not always correct, but it's a good rule of thumb
         const bestMentalAbility = Object.keys(actor.abilities).find(abi => actor.abilities[abi].value === highestMentalAbilityValue);
         // rule of thumb for tradition is to pick whatever exists in other spellcasting entries
-        const mostCommonTradition = mostCommonInList(actor.spellcasting.map(se => se.system.tradition.value));
+        const mostCommonTradition = mostCommonInList(actor.spellcasting.map(se => se?.system?.tradition.value).filter(se => !!se));
         const createData = {
             type: 'spellcastingEntry',
             name: stave.name,
