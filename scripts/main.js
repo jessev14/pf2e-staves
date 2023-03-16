@@ -289,7 +289,7 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
 function getHighestSpellslot(actor) {
     let charges = 0;
     actor.spellcasting.forEach(entry => {
-        if (entry.flags[moduleID]) return;
+        if (!entry?.flags || entry.flags[moduleID]) return;
 
         let i = 0;
         Object.values(entry.system.slots).forEach(slot => {
@@ -315,7 +315,7 @@ async function spellcastingEntry_cast(wrapped, spell, options) {
         const select = document.createElement('select');
         select.style.width = '100%';
         select.style['margin-bottom'] = '5px';
-        for (const entry of actor.spellcasting) {
+        for (const entry of actor.spellcasting.filter(e => e.system)) {
             if (entry.system.prepared.value !== 'spontaneous') continue;
             select.innerHTML += `<optgroup label="${entry.name}">`;
             for (let i = parseInt(options.level); i < 12; i++) {
