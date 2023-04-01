@@ -43,7 +43,7 @@ Hooks.on('updateItem', async (weapon, update, options, userID) => {
     if (!isStave) return;
 
     const { actor } = weapon;
-    const existingStaveEntry = actor.spellcasting.find(s => s.flags[moduleID]?.staveID === weapon.id);
+    const existingStaveEntry = actor.spellcasting.find(s => s.flags && s.flags[moduleID]?.staveID === weapon?.id);
     return createStaveSpellcastingEntry(weapon, actor, existingStaveEntry);
 });
 
