@@ -28,7 +28,8 @@ Hooks.on('createItem', async (weapon, options, userID) => {
 
     const traits = weapon.system.traits?.value;
     const isStave = traits?.includes('magical') && traits?.includes('staff');
-    if (!isStave) return;
+    const isCoda = traits?.includes('coda') && traits?.includes('staff');
+    if (!isStave && !isCoda) return;
 
     return createStaveSpellcastingEntry(weapon, weapon.actor);
 });
@@ -39,8 +40,9 @@ Hooks.on('updateItem', async (weapon, update, options, userID) => {
     if (userID !== game.user.id) return;
 
     const traits = weapon.system.traits?.value;
-    const isStave = traits?.includes('magical') && traits?.includes('staff');
-    if (!isStave) return;
+  const isStave = traits?.includes('magical') && traits?.includes('staff');
+  const isCoda = traits?.includes('coda') && traits?.includes('staff');
+  if (!isStave && !isCoda) return;
 
     const { actor } = weapon;
     const existingStaveEntry = actor.spellcasting.find(s => s.flags && s.flags[moduleID]?.staveID === weapon?.id);
@@ -50,8 +52,9 @@ Hooks.on('updateItem', async (weapon, update, options, userID) => {
 // Delete spellcastingEntry associated with stave.
 Hooks.on('preDeleteItem', (weapon, options, userID) => {
     const traits = weapon.system.traits?.value;
-    const isStave = traits?.includes('magical') && traits?.includes('staff');
-    if (!isStave) return;
+  const isStave = traits?.includes('magical') && traits?.includes('staff');
+  const isCoda = traits?.includes('coda') && traits?.includes('staff');
+  if (!isStave && !isCoda) return;
 
     const { actor } = weapon;
     const spellcastingEntries = actor.items.filter(i => i.type === 'spellcastingEntry');
