@@ -213,7 +213,7 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
         const match = description.match(regex);
         if (!match) continue;
 
-        const strs = match[0].match(/(@UUID\[Compendium\.|@Compendium\[)(.*?)]/g);
+        const strs = match[0].match(/(@UUID\[Compendium\.|@Compendium\[)(.*?)]({.*?})?/g);
         for (const str of strs) {
             const UUID = str.split('[')[1].split(']')[0].replace('Compendium.', '');
             const spell = await fromUuid("Compendium." + UUID);
