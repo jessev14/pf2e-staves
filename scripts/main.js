@@ -208,6 +208,11 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     const spells = [];
     const description = stave.system.description.value;
     const slotLevels = ['Cantrips?', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th'];
+
+    // If the previous and current descriptions match, assume no changes are needed and skip this
+    const prevDesc = existingEntry?.getFlag(moduleID, "prevDescription");
+    if (prevDesc === description) return;
+
     for (let i = 0; i < slotLevels.length; i++) {
         const regex = new RegExp(`${slotLevels[i]}.*@(UUID|Compendium).*\n`);
         const match = description.match(regex);
@@ -277,7 +282,8 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
             flags: {
                 [moduleID]: {
                     staveID: stave.id,
-                    charges: getHighestSpellslot(actor)
+                    charges: getHighestSpellslot(actor),
+                    prevDescription: description
                 }
             }
         }
@@ -286,6 +292,7 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     } else {
         for (const spell of existingEntry.spells) await spell.delete();
         for (const spell of spells) await existingEntry.addSpell(spell);
+        await existingEntry.setFlag(moduleID, "prevDescription", description);
     }
 }
 
