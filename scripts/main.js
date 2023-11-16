@@ -13,7 +13,7 @@ const mostCommonInList = (arr) => {
 
 Hooks.once('init', () => {
     // Add Charge spell type.
-    CONFIG.PF2E.spellCategories.charge = 'Charge';
+    if(CONFIG.PF2E.spellCategories) CONFIG.PF2E.spellCategories.charge = 'Charge';
     CONFIG.PF2E.preparationType.charge = 'Charge';
 
     // Patch spellcastingEntry#cast to use charges instead of spell slots for staves.
@@ -169,7 +169,7 @@ Hooks.on('renderCreatureSheetPF2e', (sheet, [html], sheetData) => {
         else npcHeader.after(chargeEl);
 
         // Add spontaneous spellcasting rules to Cast button right click.
-        const castButtons = li.querySelectorAll('button.cast-spell');
+        const castButtons = li.querySelectorAll('button.cast-spell,button[data-action="cast-spell"]');
         castButtons.forEach(button => {
             button.addEventListener('contextmenu', () => {
                 const spellLi = button.closest('li.item.spell');
@@ -298,7 +298,7 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
 
 function getHighestSpellslot(actor) {
     let charges = 0;
-    actor.spellcasting.forEach(entry => {
+    actor.spellcasting.contents.forEach(entry => {
         if (!entry?.flags || entry.flags[moduleID]) return;
 
         let i = 0;
