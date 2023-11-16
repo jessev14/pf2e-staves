@@ -1,48 +1,48 @@
 {
-    "id": "pf2e-staves",
-    "title": "PF2e Staves",
-    "description": "",
-    "authors": [
-        {
-            "name": "enso",
-            "discord": "enso#0361"
-        }
-    ],
-    "version": "1.0.0",
-    "compatibility": {
-        "minimum": "10",
-        "verified": "10"
-    },
-    "relationships": {
-        "systems": [
-            {
-                "id": "pf2e",
-                "type": "system",
-                "compatibility": {
-                    "minimum": "4.3.0"
-                }
-            }
-        ],
-        "requires": [
-            {
-                "id": "lib-wrapper",
-                "type": "module",
-                "compatibility": {
-                    "minimum": "1",
-                    "verified": "1.12.7.1"
-                }
-            }
-        ]
-    },
-    "esmodules": [
+	"id": "pf2e-staves",
+	"title": "PF2e Staves",
+	"description": "",
+	"authors": [
+		{
+			"name": "enso",
+			"discord": "enso#0361"
+		}
+	],
+	"version": "1.0.0",
+	"compatibility": {
+		"minimum": "10",
+		"verified": "11"
+	},
+	"relationships": {
+		"systems": [
+			{
+				"id": "pf2e",
+				"type": "system",
+				"compatibility": {
+					"minimum": "4.3.0"
+				}
+			}
+		],
+		"requires": [
+			{
+				"id": "lib-wrapper",
+				"type": "module",
+				"compatibility": {
+					"minimum": "1",
+					"verified": "1.12.7.1"
+				}
+			}
+		]
+	},
+	"esmodules": [
         "./scripts/main.js"
     ],
-    "styles": [
+	"styles": [
         "./styles/style.css"
     ],
-    "languages": [],
-    "flags": {},
-    "url": "",
-    "manifest": "",
-    "download": ""
+	"languages": [],
+	"flags": {},
+	"url": "",
+	"manifest": "",
+	"download": ""
 }
