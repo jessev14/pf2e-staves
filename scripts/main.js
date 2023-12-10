@@ -10,6 +10,9 @@ const mostCommonInList = (arr) => {
     ).pop();
 }
 
+//debounce the spellcasting entry creation by 100ms to not double fire when moving staves between actors
+//(which fires both create- and updateItem)
+const debouncedCSSE = foundry.utils.debounce(createStaveSpellcastingEntry, 100);
 
 Hooks.once('init', () => {
     // Add Charge spell type.
@@ -31,7 +34,7 @@ Hooks.on('createItem', async (weapon, options, userID) => {
     const isCoda = traits?.includes('coda') && traits?.includes('staff');
     if (!isStave && !isCoda) return;
 
-    return createStaveSpellcastingEntry(weapon, weapon.actor);
+    return debouncedCSSE(weapon, weapon.actor);
 });
 
 // When stave updated on a character, create spellcasting entry if none found. Update existing entry if found.
@@ -46,7 +49,7 @@ Hooks.on('updateItem', async (weapon, update, options, userID) => {
 
     const { actor } = weapon;
     const existingStaveEntry = actor.spellcasting.find(s => s.flags && s.flags[moduleID]?.staveID === weapon?.id);
-    return createStaveSpellcastingEntry(weapon, actor, existingStaveEntry);
+    return debouncedCSSE(weapon, actor, existingStaveEntry);
 });
 
 // Delete spellcastingEntry associated with stave.
