@@ -257,9 +257,9 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
     if (!spells.length) return;
 
     if (!existingEntry) {
-        const highestMentalAbilityValue = Math.max(...Object.keys(actor.abilities).filter(abi => ['cha', 'int', 'wis'].includes(abi)).map(abi => actor.abilities[abi].value));
+        const highestMentalAbilityValue = Math.max(...Object.keys(actor.abilities).filter(abi => ['cha', 'int', 'wis'].includes(abi)).map(abi => actor.abilities[abi].mod));
         // picking best mental ability; not always correct, but it's a good rule of thumb
-        const bestMentalAbility = Object.keys(actor.abilities).find(abi => actor.abilities[abi].value === highestMentalAbilityValue);
+        const bestMentalAbility = Object.keys(actor.abilities).find(abi => actor.abilities[abi].mod === highestMentalAbilityValue);
         // rule of thumb for tradition is to pick whatever exists in other spellcasting entries
         const mostCommonTradition = mostCommonInList(actor.spellcasting.map(se => se?.system?.tradition.value).filter(se => !!se));
         const createData = {
@@ -288,10 +288,10 @@ async function createStaveSpellcastingEntry(stave, actor, existingEntry = null) 
             }
         }
         const [spellcastingEntry] = await actor.createEmbeddedDocuments('Item', [createData]);
-        for (const spell of spells) await spellcastingEntry.addSpell(spell);
+        for (const spell of spells) await spellcastingEntry.addSpell(spell, spell.level);
     } else {
         for (const spell of existingEntry.spells) await spell.delete();
-        for (const spell of spells) await existingEntry.addSpell(spell);
+        for (const spell of spells) await existingEntry.addSpell(spell, spell.level);
         await existingEntry.setFlag(moduleID, "prevDescription", description);
     }
 }
