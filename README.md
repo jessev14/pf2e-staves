@@ -1,3 +1,7 @@
+# This module is deprecated; for a V12+ replacement, try using [PF2e Dailies](https://github.com/reonZ/pf2e-dailies) instead.
+
+-----
+
 ![All Downloads](https://img.shields.io/github/downloads/jessev14/pf2e-staves/total?style=for-the-badge)
 
 ![Latest Release Download Count](https://img.shields.io/github/downloads/jessev14/pf2e-staves/latest/module.zip)
